@@ -5,13 +5,13 @@ import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 
-from gym_env import Game2048Env
+from game_2048_env import Game2048Env
 
 TOTAL_TIMESTEPS = 10_000
-MODEL_DIR = 'PPO'
+MODEL_DIR = 'PPO_3'
 LOG_DIR = 'logs'
-LOAD_MODEL = '10980000.zip'
-NEXT_INDEX = 1099
+LOAD_MODEL = '7310000.zip'
+NEXT_INDEX = 71
 for path in [MODEL_DIR, LOG_DIR]:
     if not os.path.exists(path):
         os.makedirs(path)
@@ -19,8 +19,8 @@ for path in [MODEL_DIR, LOG_DIR]:
 
 def train():
     env = Monitor(Game2048Env(), LOG_DIR)
-    model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=LOG_DIR) if LOAD_MODEL == '' else PPO.load(
-        f'{MODEL_DIR}/{LOAD_MODEL}', env=env)
+    model = PPO('MlpPolicy', env, verbose=1, tensorboard_log=LOG_DIR) if LOAD_MODEL == '' else\
+        PPO.load(f'{MODEL_DIR}/{LOAD_MODEL}', env=env)
     for i in range(NEXT_INDEX, NEXT_INDEX + 999):
         model.learn(total_timesteps=TOTAL_TIMESTEPS, reset_num_timesteps=False, tb_log_name=MODEL_DIR)
         model.save(f'{MODEL_DIR}/{TOTAL_TIMESTEPS * i}')
