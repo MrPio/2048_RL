@@ -14,7 +14,7 @@ class Move(Enum):
         return self in [Move.LEFT, Move.RIGHT]
 
     def transpose(self) -> 'Move':
-        return list(Move)[(self.value + 2) % len(Move)]
+        return {Move.LEFT: Move.UP, Move.RIGHT: Move.DOWN, Move.UP: Move.LEFT, Move.DOWN: Move.RIGHT}[self]
 
 
 class Player(Enum):
@@ -45,6 +45,9 @@ class Game2048:
         self.state = State.PLAY
         self.board = np.zeros((self.size, self.size), dtype=np.int16)
         self.logs = {(2 ** i if i > 0 else 0): i for i in range(20)}
+        self.cpu_4_chance = 0.2
+        self.last_cpu_tile = 0
+        self.last_move_valid = True
         self.cpu_move()
 
     def cpu_move(self) -> None:
@@ -55,29 +58,32 @@ class Game2048:
             self.state = State.LOSE
         else:
             cell = random.randrange(0, len(zero_rows))
-            self.board[zero_rows[cell], zero_cols[cell]] = 2
+            self.last_cpu_tile = np.random.choice([2, 4], p=[1 - self.cpu_4_chance, self.cpu_4_chance])
+            self.board[zero_rows[cell], zero_cols[cell]] = self.last_cpu_tile
+            # print('cpu move: --------------------------------')
+        # print(self.board)
 
-    def user_move(self, move: Move) -> bool:
+    def user_move(self, move: Move) -> None:
         """Commits a chosen move on the current game board.
         Note: this checks for win condition
         :param move: The chosen move to commit
         :return: Whether the move resulted in any changes to the board
         """
-        changes = False
+        self.last_move_valid = False
         new_move = move if move.is_horizontal() else move.transpose()
         if not move.is_horizontal():
             self.board = np.transpose(self.board)
-
         for i in range(self.size):
             new_row = self._merge_row_left(i, new_move is Move.RIGHT)
             if not np.array_equal(new_row, self.board[i]):
-                changes = True
+                self.last_move_valid = True
             self.board[i] = new_row
         if not move.is_horizontal():
             self.board = np.transpose(self.board)
         if np.any(self.board == self.target):
             self.state = State.WIN
-        return changes
+        # print('user move: ===============================')
+        # print(self.board)
 
     def _merge_row_left(self, row: int, reverse: bool = False) -> np.array:
         non_zeros = self.board[row][self.board[row] != 0]
@@ -98,12 +104,13 @@ class Game2048:
 
     def get_reward(self) -> float:
         """Calculates the reward associated to the current board
-        Note: should the reward be relative to the game state or to the chosen move?
-              The former is here assumed
         :return: The reward associated with the current game board
         """
         # return np.sum(np.array([[1, 2, 3], [4, 5, 6], [9, 8, 7]]) * self.board)
-        return np.sum(self.get_observation() ** 1.2)
+        # return np.sum(self.get_observation() ** 1.2)
+        # return self.last_cpu_tile if self.last_move_valid else -10
+        # TODO: return the sum of merged tiles
+        return 0.0
 
     def get_observation(self) -> np.array:
         """Calculates the observation associated to the current board
